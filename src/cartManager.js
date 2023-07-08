@@ -1,121 +1,148 @@
 import fs from 'fs';
 
 class CartManager {
-    constructor(path) {
-        this.path = path;
-        this.format = 'utf-8';
-    }
+  constructor(path) {
+    this.path = path;
+    this.format = 'utf-8';
+  }
 
-    read = () => {
-        if (fs.existsSync(this.path)) {
-            return fs.promises.readFile(this.path, this.format).then(r => JSON.parse(r));
+  read = async () => {
+    try {
+      if (fs.existsSync(this.path)) {
+        const fileContent = await fs.promises.readFile(this.path, this.format);
+        if (fileContent) {
+          return JSON.parse(fileContent);
+        } else {
+          return [];
         }
-        return [];
+      }
+      return [];
+    } catch (error) {
+      throw new Error('Error reading file');
     }
+  };
 
-    write = async carts => {
-        fs.promises.writeFile(this.path, JSON.stringify(carts));
+  write = async (carts) => {
+    try {
+      await fs.promises.writeFile(this.path, JSON.stringify(carts));
+    } catch (error) {
+      throw new Error('Error writing file ');
     }
+  };
 
-    getNewID = carts =>{
-        const count = carts.length;
-        return (count > 0) ? carts[count - 1].id + 1 : 1;
-    } 
+  getNewID = (carts) => {
+    const count = carts.length;
+    return count > 0 ? carts[count - 1].id + 1 : 1;
+  };
 
-    get = async () => {
-        const carts = await this.read();
-        return carts;
+  get = async () => {
+    try {
+      const carts = await this.read();
+      return carts;
+    } catch (error) {
+      throw new Error('Error getting carts');
     }
+   
+  };
+
+  getById = async (id) => {
+    try {
+      const carts = await this.get();
+      const cart = carts.find((cart) => cart.id == id);
+      
+      if (!cart) {
+        throw new Error('No se encuentra ');
+      }
+      return cart;
+    } catch (error) {
+      throw new Error('Error getting cart by ID');
+    }
+  };
+
+  create = async () => {
+    try {
+      const carts = await this.get();
+      const newID = this.getNewID(carts);
+      const newcart = {
+        id: newID,
+        products: [],
+      };
+      carts.push(newcart);
+
+      await this.write(carts);
+
+      return newcart;
+    } catch (error) {
+      throw new Error('Error creating cart');
+    }
+  };
+
+  updateCart = async (cartID, productID) => {
     
-    getbyId = async (id) => {
-        try {
-          const list = await this.get();
-          return list.find((cart) => cart.id == id);
-        } catch (error) {
-          return { error: error.message };
+    try {
+      const cart = await this.getById(cartID);
+      let found = false;
+
+      for (let i = 0; i < cart.products.length; i++) {
+        if (cart.products[i].id === productID) {
+          cart.products[i].quantity++;
+          found = true;
+          break;
         }
+      }
+
+      if (!found) {
+        cart.products.push({
+          id: productID,
+          quantity: 1,
+        });
+      }
+      
+      await this.update(cartID, cart);
+      return cart;
+    } catch (error) {
+      throw new Error('Error adding product to cart');
     }
-    
-    create = async () => {
-        const carts = await this.get();
-        const newID = this.getNewID(carts);
-        const newcart = {
-            id: newID,
-            products: []
-        };
-        carts.push(newcart);
+  };
 
-        await this.write(carts);
+  update = async (id, pid, quantity) => {
+    try {
+      const carts = await this.read();
+      const indexCart = carts.findIndex((cart) => cart.id === id);
 
-        return newcart;
+      if (indexCart === -1) {
+        throw new Error('No existe carrito');
+      }
+
+      const indexProduct = carts[indexCart].products.findIndex((product) => product.id === pid);
+
+      if (indexProduct !== -1) {
+        carts[indexCart].products[indexProduct].quantity += quantity;
+      } else {
+        carts[indexCart].products.push({ id: pid, quantity });
+      }
+
+      await this.write(carts);
+    } catch (error) {
+      throw new Error('Error updating cart');
     }
+  };
 
-    addProduct = async (cartID, productID) =>{
-        const cart = await this.getbyId(cartID);
-        if(!cart)return;
-
-        let found = false;
-        for (let i=0; i<cart.products.length; i++) {
-            if(cart.products[i].id === productID){
-                cart.products[i].quantity++;
-                found = true;
-                break;
-            }
-        }
-        if(!found){
-            cart.products.push({
-                id: productID,
-                quantity: 1
-            });
-        }
-        await this.update(cartID, cart);
-        return cart;
+  delete = async (id) => {
+    try {
+      const carts = await this.get();
+      const index = carts.findIndex((cart) => cart.id === id);
+      if (index === -1) {
+        throw new Error('no se encuentra carrito');
+      }
+      carts.splice(index, 1);
+      await this.write(carts);
+      return carts;
+    } catch (error) {
+      throw new Error('Error deleting cart');
     }
+  };
 
-    update = async (id, obj) => {
-        obj.id = id;
-        const carts = await this.read();
-
-        for (let i=0; i<carts.length; i++) {
-            if (carts[i].id == id) {
-                carts[i] = obj;
-                break;
-            }
-        }
-
-        await this.write(carts);
-    }
-
-    delete = async (id) => {
-        const carts = await this.get();
-        const idx = carts.findIndex((e) => e.id == id);
-        if (idx < 0) return;
-        carts.splice(idx, 1);
-        await this.write(carts);
-        return carts;
-    }
-
-    deleteProduct = async (cartID, productID) =>{
-        const cart = await this.getbyId(cartID);
-        if(!cart)return;
-        let prodVoid = false;
-        let idx;
-        for (let i=0; i<cart.products.length; i++) {
-            if(cart.products[i].id === productID){
-                cart.products[i].quantity--;
-                if (cart.products[i].quantity == 0) {
-                    prodVoid = true;
-                    idx = i;
-                }
-                break;
-            }
-        }
-        if(prodVoid){
-            cart.products.splice(idx, 1);
-        }
-        await this.update(cartID, cart);
-        return cart;
-    }
 }
 
 export default CartManager;
