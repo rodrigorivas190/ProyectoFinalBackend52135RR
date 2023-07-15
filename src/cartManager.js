@@ -35,6 +35,8 @@ class CartManager {
     return count > 0 ? carts[count - 1].id + 1 : 1;
   };
 
+
+
   get = async () => {
     try {
       const carts = await this.read();
@@ -77,33 +79,34 @@ class CartManager {
     }
   };
 
-  updateCart = async (cartID, productID) => {
-    
+  updateCart = async (id, pid) => {
     try {
-      const cart = await this.getById(cartID);
+      const cart = await this.getById(id);
       let found = false;
-
+  
       for (let i = 0; i < cart.products.length; i++) {
-        if (cart.products[i].id === productID) {
+        if (cart.products[i].id === pid) {
           cart.products[i].quantity++;
           found = true;
           break;
         }
       }
-
+  
       if (!found) {
         cart.products.push({
-          id: productID,
+          id: pid,
           quantity: 1,
         });
       }
-      
-      await this.update(cartID, cart);
+  
+      await this.update(id, pid, 1);
       return cart;
+  
     } catch (error) {
-      throw new Error('Error adding product to cart');
+      throw new Error(`Error adding product to cart, ${error}`);
     }
-  };
+  }
+  
 
   update = async (id, pid, quantity) => {
     try {
@@ -113,18 +116,20 @@ class CartManager {
       if (indexCart === -1) {
         throw new Error('No existe carrito');
       }
-
       const indexProduct = carts[indexCart].products.findIndex((product) => product.id === pid);
-
       if (indexProduct !== -1) {
         carts[indexCart].products[indexProduct].quantity += quantity;
       } else {
         carts[indexCart].products.push({ id: pid, quantity });
       }
-
-      await this.write(carts);
+      try {
+        await this.write(carts);
+        return 'ok'; 
+      } catch (writeError) {
+        throw writeError; 
+      }
     } catch (error) {
-      throw new Error('Error updating cart');
+      throw new Error(`Error adding product to cart, ${error}`);
     }
   };
 
@@ -139,7 +144,7 @@ class CartManager {
       await this.write(carts);
       return carts;
     } catch (error) {
-      throw new Error('Error deleting cart');
+      throw new Error(`Error deleting cart,, ${error}`);
     }
   };
 

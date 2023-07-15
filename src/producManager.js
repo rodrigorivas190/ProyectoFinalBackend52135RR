@@ -11,41 +11,49 @@ class ProductManager {
     return count > 0 ? list[count - 1].id + 1 : 1;
   };
 
-  add = async ({
-    title,
-    description,
-    price,
-    thumbnail,
-    code,
-    stock,
-    category,
-  }) => {
-    try {
-      const list = await this.get();
-      const newID = this.getNewID(list);
-      const exis = list.some((el) => el.code == code);
-      if (!exis) {
-        const newProduct = {
-          id: newID,
-          title: title ?? "",
-          description: description ?? "",
-          price: price ?? 0.0,
-          thumbnail: thumbnail ?? [],
-          code: code ?? "",
-          stock: stock ?? 0,
-          status: true,
-          category: category ?? "general",
-        };
-        list.push(newProduct);
-        await this.write(list);
-        return newProduct;
-      } else {
-        throw new Error(`code: ${code} already exists `);
+ add = async ({
+  title,
+  description,
+  price,
+  thumbnail,
+  code,
+  stock,
+  category,
+}) => {
+  try {
+    const list = await this.get();
+    const newID = this.getNewID(list);
+    const exis = list.some((el) => el.code == code);
+    
+    if (!exis) {
+      if (!title || !price || !code || !stock) {
+        throw new Error("Validar los campos obligatorios");
       }
-    } catch (error) {
-      return { error: error.message };
+      if (thumbnail && typeof thumbnail !== "object") {
+        throw new Error("Thumbnail debe ser del tipo object");
+      }
+      const newProduct = {
+        id: newID,
+        title: title ?? "",
+        description: description ?? "",
+        price: price ?? 0.0,
+        thumbnail: thumbnail ?? [],
+        code: code ?? "",
+        stock: stock ?? 0,
+        status: true,
+        category: category ?? "general",
+      };
+      
+      list.push(newProduct);
+      await this.write(list);
+      return newProduct;
+    } else {
+      throw new Error(`code: ${code} already exists`);
     }
-  };
+  } catch (error) {
+    return { error: error.message };
+  }
+};
 
   read = () => {
     if (fs.existsSync(this.path)) {

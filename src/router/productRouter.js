@@ -33,6 +33,28 @@ router.post('/', async (req, res)=>{
     
     res.send({status: 'successful', prodAdd})
 })
+// router.put('/', async (req, res) => {
+//     const { title, description, code, price, status, stock, category, thumbnails } = req.body;
+
+//     if (!(title && description && code && price && stock && category && thumbnails)) {
+//         return res.status(400).json({ error: 'Faltan campos obligatorios' });
+//     }
+
+//     const data = {
+//         title,
+//         description,
+//         code,
+//         price,
+//         status: status ?? true,
+//         stock,
+//         category,
+//         thumbnails
+//     }
+//     const prodAdd = await productManager.add(data);
+    
+//     res.send({status: 'successful', prodAdd})
+    
+// })
 
 router.put('/:pid', async (req, res) =>{
     const pid = parseInt(req.params.pid);
@@ -50,6 +72,7 @@ router.put('/:pid', async (req, res) =>{
 
     res.send({status: 'update successful', prod});
 })
+
 
 router.delete('/:pid', async (req, res)=>{
     const pid = parseInt(req.params.pid);
